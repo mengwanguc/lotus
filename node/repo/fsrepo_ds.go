@@ -13,17 +13,26 @@ import (
 	badger "github.com/ipfs/go-ds-badger2"
 	levelds "github.com/ipfs/go-ds-leveldb"
 	measure "github.com/ipfs/go-ds-measure"
+	mds "github.com/mengwanguc/go-ds-motr/mds"
+	mio "github.com/mengwanguc/go-ds-motr/mio"
+
+	"strings"
 )
 
 type dsCtor func(path string, readonly bool) (datastore.Batching, error)
 
 var fsDatastores = map[string]dsCtor{
-	"metadata": levelDs,
+//	"metadata": levelDs,
+	"metadata": motrDs,
+	
+	
 
 	// Those need to be fast for large writes... but also need a really good GC :c
-	"staging": badgerDs, // miner specific
+//	"staging": badgerDs, // miner specific
+	"staging": motrDs, // miner specific
 
-	"client": badgerDs, // client specific
+//	"client": badgerDs, // client specific
+	"client": motrDs, // client specific
 }
 
 func badgerDs(path string, readonly bool) (datastore.Batching, error) {
@@ -42,6 +51,33 @@ func levelDs(path string, readonly bool) (datastore.Batching, error) {
 		Strict:      ldbopts.StrictAll,
 		ReadOnly:    readonly,
 	})
+}
+
+
+
+var mioConf mio.Config = mio.Config{
+	        LocalEP:    "172.31.36.67@tcp:12345:33:1000",
+        	HaxEP:      "172.31.36.67@tcp:12345:34:1",
+        	Profile:    "0x7000000000000001:0",
+        	ProcFid:    "0x7200000000000001:64",
+		TraceOn:    false,
+		Verbose:    false,
+		ThreadsN:   1,
+	}
+
+var metadataIdx = "0x7800000000000001:123456701"
+var stagingIdx = "0x7800000000000001:123456702"
+var clientIdx = "0x7800000000000001:123456703"
+
+
+func motrDs(path string, readonly bool) (datastore.Batching, error) {
+	if strings.Contains(path, "metadata") {
+		return mds.Open(mioConf, metadataIdx)
+	} else if strings.Contains(path, "staging") {
+		return mds.Open(mioConf, stagingIdx)
+	} else {
+		return mds.Open(mioConf, clientIdx)
+	}
 }
 
 func (fsr *fsLockedRepo) openDatastores(readonly bool) (map[string]datastore.Batching, error) {

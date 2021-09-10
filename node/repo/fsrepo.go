@@ -23,12 +23,14 @@ import (
 	"golang.org/x/xerrors"
 
 	"github.com/filecoin-project/lotus/blockstore"
-	badgerbs "github.com/filecoin-project/lotus/blockstore/badger"
+//	badgerbs "github.com/filecoin-project/lotus/blockstore/badger"
 	"github.com/filecoin-project/lotus/extern/sector-storage/fsutil"
 	"github.com/filecoin-project/lotus/extern/sector-storage/stores"
 
 	"github.com/filecoin-project/lotus/chain/types"
 	"github.com/filecoin-project/lotus/node/config"
+        mbs "github.com/mengwanguc/go-ds-motr/mbs"
+        mio "github.com/mengwanguc/go-ds-motr/mio"
 )
 
 const (
@@ -360,7 +362,21 @@ func (fsr *fsLockedRepo) Blockstore(ctx context.Context, domain BlockstoreDomain
 			}
 		}
 
-		bs, err := badgerbs.Open(opts)
+//		bs, err := badgerbs.Open(opts)
+		var mioConf mio.Config = mio.Config{
+                        LocalEP:    "172.31.36.67@tcp:12345:33:1000",
+                        HaxEP:      "172.31.36.67@tcp:12345:34:1",
+                        Profile:    "0x7000000000000001:0",
+
+                        ProcFid:    "0x7200000000000001:64",
+                        TraceOn:    false,
+                        Verbose:    false,
+                        ThreadsN:   1,
+                }
+
+                var chainIdx = "0x7800000000000001:123456704"
+
+                bs, err := mbs.NewMotrBlockstore(mioConf, chainIdx)
 		if err != nil {
 			fsr.bsErr = err
 			return
